@@ -5,7 +5,8 @@ PROJECT = jesse
 DIALYZER = dialyzer
 REBAR = ./rebar
 
-all: app
+.PHONY: all doc app mtarget clean-doc submodules ct
+all: app mtarget
 
 # Application.
 
@@ -20,10 +21,10 @@ clean:
 	rm -f test/*.beam
 	rm -f erl_crash.dump
 
-docs: clean-docs
+doc: clean-docs
 	@$(REBAR) doc skip_deps=true
 
-clean-docs:
+clean-doc:
 	rm -f doc/*.css
 	rm -f doc/*.html
 	rm -f doc/*.png
@@ -55,3 +56,10 @@ build-plt:
 dialyze:
 	@$(DIALYZER) --src src --plt .$(PROJECT).plt --no_native \
 		-Werror_handling -Wrace_conditions #-Wunmatched_returns -Wunderspecs
+
+
+mtarget:
+	@mkdir -p $(BLDROOT)/$(MTARGET)/erlang/jesse
+	@for dir in ebin; do \
+		rsync -a --delete $$dir $(BLDROOT)/$(MTARGET)/erlang/jesse/; \
+	done
