@@ -777,8 +777,8 @@ check_dependencies(Value, Dependencies, JsonSchema, Path, Accumulator) ->
         fun({DependencyName, DependencyValue}, Acc0) ->
             case get_path(DependencyName, Value) of
                 [] -> Acc0;
-                _  -> check_dependency_value(Value, DependencyValue, Path,
-                                             JsonSchema, Acc0)
+                _  -> check_dependency_value(Value, DependencyValue, JsonSchema,
+                                             Path, Acc0)
             end
         end,
         Accumulator,
