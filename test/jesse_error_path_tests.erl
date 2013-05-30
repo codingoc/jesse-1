@@ -49,6 +49,7 @@ schema() ->
                         {<<"chapters">>, [
                             {<<"type">>, <<"array">>},
                             {<<"minItems">>, 1},
+                            {<<"uniqueItems">>, true},
                             {<<"items">>, [
                                 {<<"type">>, <<"string">>}
                             ]}
@@ -159,5 +160,18 @@ union_type_test() ->
         (book())#book{isbn = [1, 123, 10, 23]}
     ]),
     ?assertEqual({error, ["books[0].isbn"]},
+                 jesse:validate_with_accumulator(schema(), Json,
+                                                 fun accumulator/3, [])).
+
+unique_items_test() ->
+    Json = to_json([
+        (book())#book{chapters = [
+            <<"one">>,
+            <<"two">>,
+            <<"three">>,
+            <<"three">>
+        ]}
+    ]),
+    ?assertEqual({error, ["books[0].chapters"]},
                  jesse:validate_with_accumulator(schema(), Json,
                                                  fun accumulator/3, [])).
