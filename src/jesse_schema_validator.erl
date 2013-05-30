@@ -514,7 +514,7 @@ check_union_type(Value, UnionType) ->
                     %% case when there's a schema in the array,
                     %% then we need to validate against
                     %% that schema
-                    Acc = {ok, {fun dummy_accumulator/2, undefined}},
+                    Acc = {ok, {fun dummy_accumulator/3, undefined}},
                     Path = jesse_json_path:new(),
                     Acc =:= check_value(Value, unwrap(Type), Type, Path, Acc);
                 false ->
@@ -1122,7 +1122,7 @@ accumulate_error(Path, Error, {_Result, {Fun, Acc0}}) ->
     StringPath = jesse_json_path:to_string(Path),
     {error, {Fun, Fun(StringPath, Error, Acc0)}}.
 
-dummy_accumulator(_Error, undefined) ->
+dummy_accumulator(_Path, _Error, undefined) ->
     undefined.
 
 %%=============================================================================

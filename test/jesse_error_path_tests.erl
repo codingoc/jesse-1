@@ -40,7 +40,12 @@ schema() ->
                             {<<"required">>, true}
                         ]},
                         {<<"pages">>, [ {<<"type">>, <<"integer">>} ]},
-                        {<<"isbn">>, [ {<<"type">>, <<"string">>} ]},
+                        {<<"isbn">>, [
+                            {<<"type">>, [
+                                <<"string">>,
+                                <<"integer">>
+                            ]}
+                        ]},
                         {<<"chapters">>, [
                             {<<"type">>, <<"array">>},
                             {<<"minItems">>, 1},
@@ -146,5 +151,13 @@ pattern_property_test() ->
 no_items_test() ->
     Json = [ {<<"books">>, []} ],
     ?assertEqual({error, [""]},
+                 jesse:validate_with_accumulator(schema(), Json,
+                                                 fun accumulator/3, [])).
+
+union_type_test() ->
+    Json = to_json([
+        (book())#book{isbn = [1, 123, 10, 23]}
+    ]),
+    ?assertEqual({error, ["books[0].isbn"]},
                  jesse:validate_with_accumulator(schema(), Json,
                                                  fun accumulator/3, [])).
