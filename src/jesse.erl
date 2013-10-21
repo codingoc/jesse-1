@@ -40,6 +40,7 @@
         , validate_with_accumulator/3
         , validate_with_accumulator/4
         , validate_with_accumulator/5
+        , explain_errors/1
         ]).
 
 -export_type([ json_term/0
@@ -266,9 +267,119 @@ validate_with_accumulator(Schema, Data, ParseFun, Accumulator, Initial) ->
     end.
 
 
+%% @doc Explain list of errors in the internal format and return
+%%      <code>iolist()</code> in human-readable format.
+explain_errors(Errors) ->
+    [ [format_error(Error), io_lib:nl()] || Error <- Errors ].
+
+
 %%% ----------------------------------------------------------------------------
 %%% Internal functions
 %%% ----------------------------------------------------------------------------
+
+format_error({data_invalid, Schema, wrong_type, Value}) ->
+    case json_path("type", Schema) of
+        UniounType when is_list(UniounType) ->
+            Args = [get_desc(Schema), encode(Value)],
+            print_tabbed_line("~s: ~s [bad type (check schema)]", Args);
+        Type ->
+            Args = [get_desc(Schema), encode(Value), Type],
+            print_tabbed_line("~s: ~s [should be ~s]", Args)
+    end;
+format_error({data_invalid, Schema, no_extra_properties_allowed, Value}) ->
+    Allowed  = get_props(json_path("properties", Schema)),
+    ValProps = get_props(Value),
+    Props = string:join(lists:map(fun encode/1, ValProps -- Allowed), ", "),
+    print_tabbed_line("~s has unknown properties: [~s]", [get_desc(Schema), Props]);
+
+format_error({data_invalid, Schema, {missing_required_property, Prop}, _}) ->
+    print_tabbed_line("~s missing property: ~s", [get_desc(Schema), encode(Prop)]);
+
+format_error({data_invalid, Schema, {not_unique, Item}, _Value}) ->
+    print_tabbed_line("~s: ~s [should be unique]", [get_desc(Schema), encode(Item)]);
+
+format_error({data_invalid, Schema, no_extra_items_allowed, _Value}) ->
+    print_tabbed_line("~s has unexpected items", [get_desc(Schema)]);
+
+format_error({data_invalid, Schema, not_enought_items, _Value}) ->
+    print_tabbed_line("~s doesn't have required items", [get_desc(Schema)]);
+
+format_error({data_invalid, Schema, {no_match, Pattern}, Value}) ->
+    Args = [get_desc(Schema), encode(Value), encode(Pattern)],
+    print_tabbed_line("~s: ~s [should match ~s]", Args);
+
+format_error({data_invalid, Schema, wrong_format, Value}) ->
+    Format = json_path("format", Schema),
+    Args = [get_desc(Schema), encode(Value), encode(Format)],
+    print_tabbed_line("~s: ~s [should be of format: ~s]", Args);
+
+format_error({data_invalid, Schema, not_allowed, Value}) ->
+    Disallowed = json_path("disallow", Schema),
+    Args = [get_desc(Schema), encode(Value), encode(Disallowed)],
+    print_tabbed_line("~s: ~s [should not be any of: ~s]", Args);
+
+format_error({data_invalid, Schema, not_divisible, Value}) ->
+    DivisibleBy = json_path("divisibleBy", Schema),
+    Args = [get_desc(Schema), encode(Value), encode(DivisibleBy)],
+    print_tabbed_line("~s: ~s [should be divisible by: ~s]", Args);
+
+format_error({data_invalid, Schema, {missing_dependency, Dependency}, _Val}) ->
+    Args = [get_desc(Schema), encode(Dependency)],
+    print_tabbed_line("~s missing dependency: ~s", Args);
+
+format_error({data_invalid, Schema, not_in_range, Value}) ->
+    case json_path("enum", Schema, undefined) of
+        undefined ->
+            Min = json_path("minimum", Schema, '-inf'),
+            Max = json_path("maximum", Schema, 'inf+'),
+            Args = [get_desc(Schema), encode(Value), Min, Max],
+            print_tabbed_line("~s: ~s [should be from ~p to ~p]", Args);
+        Enum ->
+            S = string:join(lists:map(fun erlang:binary_to_list/1, Enum), ", "),
+            Args = [get_desc(Schema), encode(Value), S],
+            print_tabbed_line("~s: ~s [should be in [~s]]", Args)
+    end;
+
+format_error({data_invalid, Schema, wrong_length, Value}) ->
+    Min = json_path("minLength", Schema, 0),
+    Max = json_path("maxLength", Schema, inf),
+    Len = length(binary_to_list(Value)),
+    Args = [get_desc(Schema), encode(Value), Len, Min, Max],
+    print_tabbed_line("~s: ~s has wrong length: ~p [should be from ~p to ~p]", Args);
+
+format_error({data_invalid, Schema, wrong_size, Value}) ->
+    Min = json_path("minItems", Schema, 0),
+    Max = json_path("maxItems", Schema, inf),
+    Len = length(Value),
+    Args = [get_desc(Schema), Len, Min, Max],
+    print_tabbed_line("~s has wrong items num: ~p [should be from ~p to ~p]", Args).
+
+print_tabbed_line(Format, Args) ->
+    io_lib:format(Format, Args).
+
+get_desc(Schema) ->
+    encode(json_path("description", Schema)).
+
+get_props({struct, Value}) when is_list(Value) ->
+    proplists:get_keys(Value);
+get_props(Value) when is_list(Value) ->
+    proplists:get_keys(Value).
+
+encode(Binary)  when is_binary(Binary)   -> binary_to_list(Binary);
+encode(List)    when is_list(List)       -> List;
+encode(Integer) when is_integer(Integer) -> integer_to_list(Integer).
+
+json_path(K, Json, Default) ->
+    case json_path(K, Json) of
+        [] -> Default;
+        Value -> Value
+    end.
+
+json_path(K, Json) when is_list(K) ->
+    json_path(list_to_binary(K), Json);
+json_path(K, Json) ->
+    jesse_json_path:path(K, Json).
+
 
 %% @doc Utility function to be used as a dummy accumulator callback which fails
 %%      on the first error.
