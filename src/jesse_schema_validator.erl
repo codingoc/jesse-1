@@ -91,6 +91,7 @@
                  |   'no_extra_properties_allowed'
                  |   'no_extra_items_allowed'
                  |   'not_allowed'
+                 |   'not_enough_items'
                  | { 'not_unique', Value :: jesse:json_term() }
                  |   'not_in_range'
                  |   'not_divisible'
@@ -749,7 +750,7 @@ check_items_array(Value, Items, JsonSchema, Path, Accumulator) ->
             end;
         NExtra when NExtra < 0 ->
             accumulate_error(Path, { 'data_invalid', JsonSchema,
-                                     'not_enought_items', Value }, Accumulator)
+                                     'not_enough_items', Value }, Accumulator)
     end.
 
 %% @doc 5.8.  dependencies

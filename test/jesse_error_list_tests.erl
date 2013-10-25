@@ -98,8 +98,10 @@ check_errors(Num, Data) ->
     ?assertEqual(Num, length(Errors)),
     ?assertEqual(ok, lists:foreach(fun match_error/1, Errors)).
 
-match_error({'data_invalid', _, Type, _}) -> match_error_type(Type);
-match_error({'schema_invalid', _, Type}) -> match_error_type(Type);
+match_error({Path, {'data_invalid', _, Type, _}}) when is_list(Path) ->
+    match_error_type(Type);
+match_error({Path, {'schema_invalid', _, Type}}) when is_list(Path) ->
+    match_error_type(Type);
 match_error(Error) -> throw({'wrong_error_format', Error}).
 
 match_error_type(Atom) when is_atom(Atom) -> ok;
