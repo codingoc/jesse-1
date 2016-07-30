@@ -15,8 +15,8 @@
 -type kvc_key() :: binary() | atom() | string().
 -type proplist() :: [{kvc_key(), kvc_obj()}].
 -type kvc_obj_node() :: proplist() | {struct, proplist()}
-                      | dict() | gb_tree() | term().
--type typed_proplist() :: {proplist() | {gb_tree, gb_tree()}, elem_type()}.
+                      | dict:dict() | gb_trees:gb_tree() | term().
+-type typed_proplist() :: {proplist() | {gb_tree, gb_trees:gb_tree()}, elem_type()}.
 
 -type path() :: list().
 
